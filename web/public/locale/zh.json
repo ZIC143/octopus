@@ -395,6 +395,7 @@
         "card": {
             "requestCount": "请求次数",
             "totalCost": "总成本",
+            "failedRequests": "失败次数",
             "toast": {
                 "enabled": "渠道已启用",
                 "disabled": "渠道已禁用"

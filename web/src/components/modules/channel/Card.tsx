@@ -4,7 +4,7 @@ import {
     MorphingDialogContainer,
     MorphingDialogContent,
 } from '@/components/ui/morphing-dialog';
-import { DollarSign, MessageSquare } from 'lucide-react';
+import { DollarSign, MessageSquare, XCircle } from 'lucide-react';
 import { type StatsMetricsFormatted } from '@/api/endpoints/stats';
 import { type Channel, useEnableChannel } from '@/api/endpoints/channel';
 import { CardContent } from './CardContent';
@@ -34,7 +34,7 @@ export function Card({ channel, stats }: { channel: Channel; stats: StatsMetrics
     return (
         <MorphingDialog>
             <MorphingDialogTrigger className="w-full">
-                <article className="relative flex h-54 flex-col justify-between gap-5 rounded-3xl border border-border bg-card text-card-foreground p-4 custom-shadow transition-all duration-300 hover:scale-[1.02]">
+                <article className="relative flex h-68 flex-col justify-between gap-5 rounded-3xl border border-border bg-card text-card-foreground p-4 custom-shadow transition-all duration-300 hover:scale-[1.02]">
                     <header className="relative flex items-center justify-between gap-2">
                         <Tooltip side="top" sideOffset={10} align="center">
                             <TooltipTrigger asChild>
@@ -74,6 +74,19 @@ export function Card({ channel, stats }: { channel: Channel; stats: StatsMetrics
                             <dd className="text-base">
                                 {stats.total_cost.formatted.value}
                                 <span className="ml-1 text-xs text-muted-foreground">{stats.total_cost.formatted.unit}</span>
+                            </dd>
+                        </div>
+
+                        <div className="flex items-center justify-between rounded-2xl border border-border/70 bg-background/80 p-2">
+                            <div className="flex items-center gap-3">
+                                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
+                                    <XCircle className="h-5 w-5" />
+                                </span>
+                                <dt className="text-sm text-muted-foreground">{t('failedRequests')}</dt>
+                            </div>
+                            <dd className="text-base">
+                                {stats.request_failed.formatted.value}
+                                <span className="ml-1 text-xs text-muted-foreground">{stats.request_failed.formatted.unit}</span>
                             </dd>
                         </div>
                     </dl>

@@ -395,6 +395,7 @@
         "card": {
             "requestCount": "Requests",
             "totalCost": "Total Cost",
+            "failedRequests": "Failed",
             "toast": {
                 "enabled": "Channel enabled",
                 "disabled": "Channel disabled"
