@@ -103,7 +103,8 @@
             "title": "排行榜",
             "sortByCost": "金额",
             "sortByCount": "次数",
-            "noData": "暂无排行数据"
+            "noData": "暂无排行数据",
+            "successRate": "成功率"
         }
     },
     "setting": {
@@ -117,7 +118,8 @@
         },
         "language": {
             "label": "语言",
-            "zh": "中文",
+            "zh_hans": "简体中文",
+            "zh_hant": "繁体中文",
             "en": "English"
         },
         "proxyUrl": {
@@ -388,7 +390,11 @@
             "noRequestContent": "(无请求内容)",
             "noResponseContent": "(无响应内容)",
             "firstTokenTime": "首字时间",
-            "tokens": "tokens"
+            "tokens": "tokens",
+            "retryDetails": "重试详情",
+            "attempts": "次尝试",
+            "success": "成功",
+            "failed": "失败"
         }
     },
     "channel": {

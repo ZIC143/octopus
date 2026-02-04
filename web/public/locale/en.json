@@ -103,7 +103,8 @@
             "title": "Ranking",
             "sortByCost": "Cost",
             "sortByCount": "Count",
-            "noData": "No ranking data"
+            "noData": "No ranking data",
+            "successRate": "Success Rate"
         }
     },
     "setting": {
@@ -117,7 +118,8 @@
         },
         "language": {
             "label": "Language",
-            "zh": "中文",
+            "zh_hans": "Chinese (Simplified)",
+            "zh_hant": "Chinese (Traditional)",
             "en": "English"
         },
         "proxyUrl": {
@@ -388,7 +390,11 @@
             "noRequestContent": "(No request content)",
             "noResponseContent": "(No response content)",
             "firstTokenTime": "First Token Time",
-            "tokens": "tokens"
+            "tokens": "tokens",
+            "retryDetails": "Retry Details",
+            "attempts": "attempts",
+            "success": "Success",
+            "failed": "Failed"
         }
     },
     "channel": {
