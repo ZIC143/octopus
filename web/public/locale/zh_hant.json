@@ -79,7 +79,15 @@
             "inputTokens": "輸入 Tokens",
             "inputCost": "輸入費用",
             "outputTokens": "輸出 Tokens",
-            "outputCost": "輸出費用"
+            "outputCost": "輸出費用",
+            "allTimeStats": "歷史總計",
+            "todayStats": "今日請求",
+            "todayTotalStats": "今日全部",
+            "todayStatsTitle": "今日統計",
+            "weekStats": "本週請求",
+            "weekTotalStats": "本週全部",
+            "weekStatsTitle": "本週統計",
+            "todayWeekStatsTitle": "今日 / 本週"
         },
         "chart": {
             "totalRequests": "請求次數",
@@ -393,6 +401,7 @@
         "card": {
             "requestCount": "請求次數",
             "totalCost": "總成本",
+            "failedRequests": "失敗次數",
             "toast": {
                 "enabled": "渠道已啟用",
                 "disabled": "渠道已停用"
