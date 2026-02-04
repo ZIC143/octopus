@@ -328,6 +328,8 @@
             "addItem": "Add Model",
             "autoAdd": "Auto Add",
             "clear": "Clear",
+            "grouped": "Grouped",
+            "ungrouped": "Ungrouped",
             "selectChannel": "Channel",
             "selectModel": "Model"
         },

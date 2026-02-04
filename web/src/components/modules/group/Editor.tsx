@@ -5,6 +5,7 @@ import { Check, ChevronDownIcon, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import * as AccordionPrimitive from '@radix-ui/react-accordion';
 import { useModelChannelList, type LLMChannel } from '@/api/endpoints/model';
+import { useGroupList } from '@/api/endpoints/group';
 import { Button } from '@/components/ui/button';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -14,7 +15,7 @@ import { getModelIcon } from '@/lib/model-icons';
 import type { GroupMode } from '@/api/endpoints/group';
 import type { SelectedMember } from './ItemList';
 import { MemberList } from './ItemList';
-import { matchesGroupName, memberKey, normalizeKey, MODE_LABELS } from './utils';
+import { matchesGroupName, memberKey, modelChannelKey, normalizeKey, MODE_LABELS } from './utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/animate-ui/components/animate/tooltip';
 import { HelpCircle } from 'lucide-react';
 
@@ -27,6 +28,12 @@ export type GroupEditorValues = {
     first_token_time_out: number;
     members: SelectedMember[];
 };
+
+interface ChannelGroup {
+    id: number;
+    name: string;
+    models: LLMChannel[];
+}
 
 function ModelPickerSection({
     modelChannels,
@@ -42,21 +49,110 @@ function ModelPickerSection({
     autoAddDisabled: boolean;
 }) {
     const t = useTranslations('group');
+    const { data: groups = [] } = useGroupList();
 
     const selectedKeys = useMemo(() => new Set(selectedMembers.map(memberKey)), [selectedMembers]);
 
-    const channels = useMemo(() => {
-        const byId = new Map<number, { id: number; name: string; models: LLMChannel[] }>();
+    // 获取所有已在分组中的模型 key
+    const groupedModelKeys = useMemo(() => {
+        const keys = new Set<string>();
+        groups.forEach((group) => {
+            group.items?.forEach((item) => {
+                keys.add(modelChannelKey(item.channel_id, item.model_name));
+            });
+        });
+        return keys;
+    }, [groups]);
+
+    // 将模型按渠道分组，并区分已分组/未分组
+    const { groupedChannels, ungroupedChannels } = useMemo(() => {
+        const grouped = new Map<number, ChannelGroup>();
+        const ungrouped = new Map<number, ChannelGroup>();
+
         modelChannels.forEach((mc) => {
-            const existing = byId.get(mc.channel_id);
-            if (existing) existing.models.push(mc);
-            else byId.set(mc.channel_id, { id: mc.channel_id, name: mc.channel_name, models: [mc] });
+            const key = memberKey(mc);
+            const isGrouped = groupedModelKeys.has(key);
+            const targetMap = isGrouped ? grouped : ungrouped;
+            
+            const existing = targetMap.get(mc.channel_id);
+            if (existing) {
+                existing.models.push(mc);
+            } else {
+                targetMap.set(mc.channel_id, { id: mc.channel_id, name: mc.channel_name, models: [mc] });
+            }
         });
 
-        return Array.from(byId.values())
-            .map((c) => ({ ...c, models: [...c.models].sort((a, b) => a.name.localeCompare(b.name)) }))
-            .sort((a, b) => a.id - b.id);
-    }, [modelChannels]);
+        const sortChannels = (map: Map<number, ChannelGroup>) => 
+            Array.from(map.values())
+                .map((c) => ({ ...c, models: [...c.models].sort((a, b) => a.name.localeCompare(b.name)) }))
+                .sort((a, b) => a.id - b.id);
+
+        return {
+            groupedChannels: sortChannels(grouped),
+            ungroupedChannels: sortChannels(ungrouped),
+        };
+    }, [modelChannels, groupedModelKeys]);
+
+    const renderModelItem = (m: LLMChannel) => {
+        const isSelected = selectedKeys.has(memberKey(m));
+        const { Avatar } = getModelIcon(m.name);
+        return (
+            <button
+                key={memberKey(m)}
+                type="button"
+                onClick={() => !isSelected && onAdd(m)}
+                disabled={isSelected}
+                className={cn(
+                    'w-full flex items-center justify-between gap-2 rounded-lg border border-border/50 bg-background px-2.5 py-2 text-left transition-colors',
+                    isSelected ? 'opacity-60 cursor-not-allowed' : 'hover:bg-muted'
+                )}
+            >
+                <span className="flex items-center gap-2 min-w-0">
+                    <Avatar size={16} />
+                    <span className="text-sm font-medium truncate">{m.name}</span>
+                </span>
+
+                <span className="shrink-0 text-muted-foreground">
+                    {isSelected ? (
+                        <Check className="size-4 text-primary" />
+                    ) : (
+                        <Plus className="size-4" />
+                    )}
+                </span>
+            </button>
+        );
+    };
+
+    const renderChannelAccordion = (channel: ChannelGroup, prefix: string) => {
+        const total = channel.models.length;
+        const selectedCount = channel.models.reduce(
+            (acc, m) => acc + (selectedKeys.has(memberKey(m)) ? 1 : 0),
+            0
+        );
+        const available = total - selectedCount;
+
+        return (
+            <AccordionItem key={`${prefix}-${channel.id}`} value={`${prefix}-channel-${channel.id}`}>
+                <AccordionPrimitive.Header className="rounded-lg bg-muted sticky top-0 z-10 flex px-2 overflow-hidden">
+                    <AccordionPrimitive.Trigger className="flex flex-1 min-w-0 items-center gap-4 py-3 text-left text-sm transition-all outline-none focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50 [&[data-state=open]>svg]:rotate-180">
+                        <span className="truncate">{channel.name}</span>
+                        <span className="text-xs text-muted-foreground shrink-0">
+                            {available}/{total}
+                        </span>
+                        <ChevronDownIcon className="text-muted-foreground pointer-events-none size-4 shrink-0 transition-transform duration-200" />
+                    </AccordionPrimitive.Trigger>
+                </AccordionPrimitive.Header>
+                <AccordionContent className="px-2 pt-2">
+                    <div className="flex flex-col gap-1.5">
+                        {channel.models.map(renderModelItem)}
+                    </div>
+                </AccordionContent>
+            </AccordionItem>
+        );
+    };
+
+    const totalGrouped = groupedChannels.reduce((acc, c) => acc + c.models.length, 0);
+    const totalUngrouped = ungroupedChannels.reduce((acc, c) => acc + c.models.length, 0);
 
     return (
         <div className="rounded-xl border border-border/50 bg-muted/30 flex flex-col min-h-0">
@@ -87,61 +183,45 @@ function ModelPickerSection({
 
             <div className="flex-1 min-h-0 overflow-y-auto p-2">
                 <Accordion type="multiple" className="w-full space-y-2">
-                    {channels.map((channel) => {
-                        const total = channel.models.length;
-                        const selectedCount = channel.models.reduce(
-                            (acc, m) => acc + (selectedKeys.has(memberKey(m)) ? 1 : 0),
-                            0
-                        );
-                        const available = total - selectedCount;
+                    {/* 未分组模型 */}
+                    {ungroupedChannels.length > 0 && (
+                        <AccordionItem value="ungrouped-section">
+                            <AccordionPrimitive.Header className="rounded-lg bg-primary/10 sticky top-0 z-20 flex px-2 overflow-hidden">
+                                <AccordionPrimitive.Trigger className="flex flex-1 min-w-0 items-center gap-4 py-3 text-left text-sm font-medium transition-all outline-none focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50 [&[data-state=open]>svg]:rotate-180">
+                                    <span className="truncate text-primary">{t('form.ungrouped')}</span>
+                                    <span className="text-xs text-primary/70 shrink-0">
+                                        ({totalUngrouped})
+                                    </span>
+                                    <ChevronDownIcon className="text-primary/70 pointer-events-none size-4 shrink-0 transition-transform duration-200" />
+                                </AccordionPrimitive.Trigger>
+                            </AccordionPrimitive.Header>
+                            <AccordionContent className="pt-2">
+                                <Accordion type="multiple" className="w-full space-y-2 pl-2">
+                                    {ungroupedChannels.map((channel) => renderChannelAccordion(channel, 'ungrouped'))}
+                                </Accordion>
+                            </AccordionContent>
+                        </AccordionItem>
+                    )}
 
-                        return (
-                            <AccordionItem key={channel.id} value={`channel-${channel.id}`}>
-                                <AccordionPrimitive.Header className="rounded-lg bg-muted sticky top-0 z-10 flex px-2 overflow-hidden">
-                                    <AccordionPrimitive.Trigger className="flex flex-1 min-w-0 items-center gap-4 py-4 text-left text-sm transition-all outline-none focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50 [&[data-state=open]>svg]:rotate-180">
-                                        <span className="truncate">{channel.name}</span>
-                                        <span className="text-xs text-muted-foreground shrink-0">
-                                            {available}/{total}
-                                        </span>
-                                        <ChevronDownIcon className="text-muted-foreground pointer-events-none size-4 shrink-0 transition-transform duration-200" />
-                                    </AccordionPrimitive.Trigger>
-                                </AccordionPrimitive.Header>
-                                <AccordionContent className="px-2 pt-2">
-                                    <div className="flex flex-col gap-1.5">
-                                        {channel.models.map((m) => {
-                                            const isSelected = selectedKeys.has(memberKey(m));
-                                            const { Avatar } = getModelIcon(m.name);
-                                            return (
-                                                <button
-                                                    key={memberKey(m)}
-                                                    type="button"
-                                                    onClick={() => !isSelected && onAdd(m)}
-                                                    disabled={isSelected}
-                                                    className={cn(
-                                                        'w-full flex items-center justify-between gap-2 rounded-lg border border-border/50 bg-background px-2.5 py-2 text-left transition-colors',
-                                                        isSelected ? 'opacity-60 cursor-not-allowed' : 'hover:bg-muted'
-                                                    )}
-                                                >
-                                                    <span className="flex items-center gap-2 min-w-0">
-                                                        <Avatar size={16} />
-                                                        <span className="text-sm font-medium truncate">{m.name}</span>
-                                                    </span>
-
-                                                    <span className="shrink-0 text-muted-foreground">
-                                                        {isSelected ? (
-                                                            <Check className="size-4 text-primary" />
-                                                        ) : (
-                                                            <Plus className="size-4" />
-                                                        )}
-                                                    </span>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                </AccordionContent>
-                            </AccordionItem>
-                        );
-                    })}
+                    {/* 已分组模型 */}
+                    {groupedChannels.length > 0 && (
+                        <AccordionItem value="grouped-section">
+                            <AccordionPrimitive.Header className="rounded-lg bg-muted sticky top-0 z-20 flex px-2 overflow-hidden">
+                                <AccordionPrimitive.Trigger className="flex flex-1 min-w-0 items-center gap-4 py-3 text-left text-sm font-medium transition-all outline-none focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50 [&[data-state=open]>svg]:rotate-180">
+                                    <span className="truncate text-muted-foreground">{t('form.grouped')}</span>
+                                    <span className="text-xs text-muted-foreground/70 shrink-0">
+                                        ({totalGrouped})
+                                    </span>
+                                    <ChevronDownIcon className="text-muted-foreground/70 pointer-events-none size-4 shrink-0 transition-transform duration-200" />
+                                </AccordionPrimitive.Trigger>
+                            </AccordionPrimitive.Header>
+                            <AccordionContent className="pt-2">
+                                <Accordion type="multiple" className="w-full space-y-2 pl-2">
+                                    {groupedChannels.map((channel) => renderChannelAccordion(channel, 'grouped'))}
+                                </Accordion>
+                            </AccordionContent>
+                        </AccordionItem>
+                    )}
                 </Accordion>
             </div>
         </div>

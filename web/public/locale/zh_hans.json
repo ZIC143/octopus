@@ -328,6 +328,8 @@
             "addItem": "添加模型",
             "autoAdd": "自动添加",
             "clear": "清空",
+            "grouped": "已分组",
+            "ungrouped": "未分组",
             "selectChannel": "渠道",
             "selectModel": "模型"
         },
